@@ -60,29 +60,41 @@ def on_realtime_bar(ticker, bar, hasNewBar):
         prev_low = current['low']
         prev_time = current['start_time']
 
+        # 锁定开盘第一根（9:30-9:35周期）
+        if first_range[sym]['high'] is None and prev_time.hour == 9 and prev_time.minute == 30:
+            first_range[sym]['high'] = prev_high
+            first_range[sym]['low'] = prev_low
+            print("\n" + "="*80)
+            print(f"*** {sym} 开盘第一根K线锁定完成！High={prev_high:.2f} Low={prev_low:.2f} ***")
+            print("="*80 + "\n")
+
         if first_range[sym]['high'] is not None:
             first_high = first_range[sym]['high']
             first_low = first_range[sym]['low']
 
-            print(f"\n[EVENT] {sym} {prev_time.strftime('%H:%M')} K线收盘，检查反弹失败")
-            print(f"    K线: H={prev_high:.2f} L={prev_low:.2f} C={prev_close:.2f}")
-            print(f"    开盘范围: H={first_high:.2f} L={first_low:.2f}")
+            # 跳过第一根K线本身的检查
+            if prev_time.hour == 9 and prev_time.minute == 30:
+                pass
+            else:
+                print(f"\n[EVENT] {sym} {prev_time.strftime('%H:%M')} K线收盘，检查反弹失败")
+                print(f"    K线: H={prev_high:.2f} L={prev_low:.2f} C={prev_close:.2f}")
+                print(f"    开盘范围: H={first_high:.2f} L={first_low:.2f}")
 
-            # 向上反弹失败
-            if prev_high > first_low and prev_close <= first_low:
-                msg = f"**【向上反弹失败】** {sym} {prev_time.strftime('%H:%M')} ET\n收盘 {prev_close:.2f} ≤ 下轨 {first_low:.2f}\n曾上探 {prev_high:.2f}"
-                if sym not in alerted:  # 防止重复
-                    send_webhook(msg)
-                    alerted.add(sym)
-                print("[TRIGGER] 向上反弹失败！")
+                # 向上反弹失败
+                if prev_high > first_low and prev_close <= first_low:
+                    msg = f"**【向上反弹失败】** {sym} {prev_time.strftime('%H:%M')} ET\n收盘 {prev_close:.2f} ≤ 下轨 {first_low:.2f}\n曾上探 {prev_high:.2f}"
+                    if sym not in alerted:  # 防止重复
+                        send_webhook(msg)
+                        alerted.add(sym)
+                    print("[TRIGGER] 向上反弹失败！")
 
-            # 向下反弹失败
-            elif prev_low < first_high and prev_close >= first_high:
-                msg = f"**【向下反弹失败】** {sym} {prev_time.strftime('%H:%M')} ET\n收盘 {prev_close:.2f} ≥ 上轨 {first_high:.2f}\n曾下探 {prev_low:.2f}"
-                if sym not in alerted:
-                    send_webhook(msg)
-                    alerted.add(sym)
-                print("[TRIGGER] 向下反弹失败！")
+                # 向下反弹失败
+                elif prev_low < first_high and prev_close >= first_high:
+                    msg = f"**【向下反弹失败】** {sym} {prev_time.strftime('%H:%M')} ET\n收盘 {prev_close:.2f} ≥ 上轨 {first_high:.2f}\n曾下探 {prev_low:.2f}"
+                    if sym not in alerted:
+                        send_webhook(msg)
+                        alerted.add(sym)
+                    print("[TRIGGER] 向下反弹失败！")
 
     # 更新或初始化当前周期
     if current['start_time'] != cycle_start:
@@ -98,25 +110,13 @@ def on_realtime_bar(ticker, bar, hasNewBar):
         current['low'] = min(current['low'], bar.low)
         current['close'] = bar.close
 
-    # 锁定开盘第一根（9:30-9:35周期）
-    if first_range[sym]['high'] is None and cycle_start.hour == 9 and cycle_start.minute == 35:
-        first_range[sym]['high'] = current['high']
-        first_range[sym]['low'] = current['low']
-        print("\n" + "="*80)
-        print(f"*** {sym} 开盘第一根K线锁定完成！High={current['high']:.2f} Low={current['low']:.2f} ***")
-        print("="*80 + "\n")
-
 # ==================== 优雅关闭 ====================
 def signal_handler(sig, frame):
     global shutdown_flag
     print("\n[SHUTDOWN] 收到关闭信号（Ctrl+C），正在优雅退出...")
     shutdown_flag = True
-    if ib_instance and ib_instance.isConnected():
-        ib_instance.disconnect()
-        print("[DISCONNECTED] 已安全断开 IB API 连接")
-    print("[EXIT] 程序即将退出")
-    sys.exit(0)  # 可选：强制退出（asyncio.run 会捕获）
-    
+    print("[WAIT] 等待异步任务结束...")
+
 # ==================== 监控单个股票 ====================
 async def monitor_symbol(ib, symbol):
     contract = Stock(symbol, 'SMART', 'USD')
@@ -132,9 +132,10 @@ async def monitor_symbol(ib, symbol):
 
     try:
         while is_within_monitoring_window() and not shutdown_flag:
-            await asyncio.sleep(10)
+            await asyncio.sleep(1)
     finally:
-        ib.cancelRealTimeBars(ticker)
+        if ib.isConnected():
+            ib.cancelRealTimeBars(ticker)
         print(f"[END] {symbol} 监控结束")
 
 # ==================== 主函数 ====================
@@ -144,7 +145,7 @@ async def main():
     ib_instance = ib
 
     try:
-        ib.connect('127.0.0.1', 7496, clientId=10)  # 实盘端口7496
+        await ib.connectAsync('127.0.0.1', 7496, clientId=10)  # 实盘端口7496
         print("实盘账户连接成功")
     except Exception as e:
         print(f"连接失败: {e}")
@@ -159,9 +160,10 @@ async def main():
     await asyncio.gather(*tasks)
 
     ib.disconnect()
+    print("[DISCONNECTED] 已安全断开 IB API 连接")
 
 if __name__ == '__main__':
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
-    util.startLoop()
+    # util.startLoop()  # 不需要，asyncio.run会自动管理循环
     asyncio.run(main())
