@@ -177,7 +177,7 @@ async def main():
         config = Config.from_env()
         # 直接创建对象，不使用 with 语句
         ctx = QuoteContext(config)
-        send_webhook("🔧 GitHub 环境测试", "GitHub Actions 已成功启动脚本并加载环境变量。", 3447003)
+        # send_webhook("🔧 GitHub 环境测试", "GitHub Actions 已成功启动脚本并加载环境变量。", 3447003)
         await monitor_stocks(ctx)
     except Exception as e:
         print(f"[CRITICAL] 脚本崩溃: {e}")
