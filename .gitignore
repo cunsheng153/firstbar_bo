@@ -1,7 +1,46 @@
-venv/
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-.Python
+# --- 敏感信息 (最重要) ---
+.env
+*.env
+credentials.json
+config.yaml  # 如果你把 key 写在 yaml 里
 
+# --- Python 缓存与运行环境 ---
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# --- 虚拟环境 ---
+venv/
+.venv/
+ENV/
+env.bak/
+venv.bak/
+
+# --- IDE 配置 (VS Code / PyCharm) ---
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# --- 日志文件 ---
+*.log
+logs/
