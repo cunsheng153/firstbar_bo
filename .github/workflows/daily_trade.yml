@@ -1,4 +1,4 @@
-name: Daily Stock Monitor
+name: 开盘反弹策略监控流
 
 on:
   schedule:
