@@ -20,7 +20,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install longport-openapi requests pytz
+          pip install longport requests pytz
 
       - name: Run Script
         env:
