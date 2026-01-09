@@ -33,7 +33,7 @@ def send_webhook(title, description, color):
     # 比如： "注意！AAPL 向上反弹失败"
     tts_text = f"注意！{title}" 
     payload = {
-        "username": "firstbar反弹策略",
+        "username": "疤脸哥策略",
         "tts": True,               # 开启朗读
         "content": tts_text,       # <--- TTS 实际朗读的内容在这里！
         "embeds": [
@@ -86,7 +86,7 @@ async def get_first_candle_data(ctx):
 
 async def monitor_stocks(ctx):
     print("监控程序已启动...")
-    send_webhook("firstbar策略监控系统启动", f"正在开启开盘反弹策略监控，当前时间：{datetime.now(et_tz).strftime('%Y-%m-%d %H:%M:%S')}", 3447003)
+    send_webhook("疤脸哥策略监控已启动", f"正在开启开盘反弹策略监控，当前时间：{datetime.now(et_tz).strftime('%Y-%m-%d %H:%M:%S')}", 3447003)
     last_processed_time = {sym: 0 for sym in symbols}
 
     while not shutdown_flag:
