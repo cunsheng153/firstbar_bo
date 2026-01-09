@@ -16,7 +16,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.13'
+          python-version: '3.10'  # <--- 从 3.13 改为 3.10，这是目前兼容性最稳的版本
 
       - name: Install dependencies
         run: |
