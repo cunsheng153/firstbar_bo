@@ -28,10 +28,28 @@ def get_today_market_times():
     monitor_end = market_open + timedelta(hours=2)
     return market_open, monitor_start, monitor_end
 
-def send_webhook(msg):
-    data = {"content": msg, "username": "开盘反弹策略警报"}
+def send_webhook(title, description, color):
+    # 【核心修复】构造一段纯文本，专门给 TTS 读
+    # 比如： "注意！AAPL 向上反弹失败"
+    tts_text = f"注意！{title}" 
+    payload = {
+        "username": "firstbar反弹策略",
+        "tts": True,               # 开启朗读
+        "content": tts_text,       # <--- TTS 实际朗读的内容在这里！
+        "embeds": [
+            {
+                "title": title,
+                "description": description,
+                "color": color,
+                "footer": {"text": "=====Longport 实时监控====="}
+            }
+        ]
+    }
+    
     try:
-        requests.post(DISCORD_WEBHOOK, json=data, timeout=5)
+        # 增加 headers 确保兼容性
+        headers = {"Content-Type": "application/json"}
+        requests.post(DISCORD_WEBHOOK, json=payload, headers=headers, timeout=5)
     except Exception as e:
         print(f"[Warn] Discord推送失败: {e}")
 
@@ -119,15 +137,28 @@ async def monitor_stocks(ctx):
 
                 # 逻辑判断
                 if curr_high > ref_low and curr_close <= ref_low:
-                    msg = f"📉 **{sym} 向上反弹失败**\n收盘 {curr_close:.2f} 跌破首根低点 {ref_low:.2f}"
-                    send_webhook(msg)
+                    alert_id = f"{sym}_up_{l_ts}"
+                    if alert_id not in alerted:
+                        title = f"📉 {sym} 向上反弹失败"
+                        desc = (f"**状态**: 假突破回落 (看空)\n"
+                                f"**当前收盘**: {curr_close:.2f}\n"
+                                f"**首根下轨**: {ref_low:.2f}\n"
+                                f"**曾上探**: {curr_high:.2f}")
+                        send_webhook(title, desc, 16711680) # 传入红色代码
+                        alerted.add(alert_id)
                     print(f"[TRIGGER] {sym} UP FAIL")
-
+                
                 elif curr_low < ref_high and curr_close >= ref_high:
-                    msg = f"📈 **{sym} 向下反弹失败**\n收盘 {curr_close:.2f} 涨回首根高点 {ref_high:.2f}"
-                    send_webhook(msg)
+                    alert_id = f"{sym}_down_{l_ts}"
+                    if alert_id not in alerted:
+                        title = f"📈 {sym} 向下反弹失败"
+                        desc = (f"**状态**: 假跌破拉回 (看多)\n"
+                                f"**当前收盘**: {curr_close:.2f}\n"
+                                f"**首根上轨**: {ref_high:.2f}\n"
+                                f"**曾下探**: {curr_low:.2f}")
+                        send_webhook(title, desc, 65280) # 传入绿色代码
+                        alerted.add(alert_id)
                     print(f"[TRIGGER] {sym} DOWN FAIL")
-
             except Exception as e:
                 print(f"Error checking {sym}: {e}")
 
