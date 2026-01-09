@@ -25,7 +25,7 @@ def get_today_market_times():
     now = datetime.now(et_tz)
     market_open = now.replace(hour=9, minute=30, second=0, microsecond=0)
     monitor_start = market_open + timedelta(minutes=30)
-    monitor_end = market_open + timedelta(hours=2)
+    monitor_end = market_open + timedelta(hours=3)
     return market_open, monitor_start, monitor_end
 
 def send_webhook(title, description, color):
