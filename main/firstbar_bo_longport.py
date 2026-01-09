@@ -127,6 +127,7 @@ async def monitor_stocks(ctx):
                 if l_ts <= last_processed_time[sym]:
                     continue 
                 
+                curr_open = float(latest_candle.open)
                 curr_close = float(latest_candle.close)
                 curr_high = float(latest_candle.high)
                 curr_low = float(latest_candle.low)
@@ -137,7 +138,7 @@ async def monitor_stocks(ctx):
                 last_processed_time[sym] = l_ts
 
                 # 逻辑判断
-                if curr_high > ref_low and curr_close <= ref_low:
+                if curr_high > ref_low and curr_close <= ref_low and curr_open < ref_low:
                     alert_id = f"{sym}_up_{l_ts}"
                     if alert_id not in alerted:
                         title = f"📉 {sym} 向上反弹失败"
@@ -149,7 +150,7 @@ async def monitor_stocks(ctx):
                         alerted.add(alert_id)
                     print(f"[TRIGGER] {sym} UP FAIL")
                 
-                elif curr_low < ref_high and curr_close >= ref_high:
+                elif curr_low < ref_high and curr_close >= ref_high and curr_open > ref_high:
                     alert_id = f"{sym}_down_{l_ts}"
                     if alert_id not in alerted:
                         title = f"📈 {sym} 向下反弹失败"
