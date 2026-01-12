@@ -119,9 +119,12 @@ async def monitor_stocks(ctx):
 
             try:
                 k_lines = ctx.candlesticks(sym, Period.Min_5, 2, AdjustType.NoAdjust)
-                if not k_lines: continue
-                
-                latest_candle = k_lines[-1]
+                if not k_lines or len(k_lines) < 2: continue
+                # k_lines[-1] 是当前未走完的（实时的）
+                # k_lines[-2] 是上一根已经走完的（收盘的）
+                latest_candle = k_lines[-2]
+                # 打印：股票 - 时间 - 当前价 - 最高 - 最低
+                print(f"[{sym}] 时间:{latest_candle.timestamp} 现价:{latest_candle.close} 高:{latest_candle.high} 低:{latest_candle.low}")
                 l_ts = latest_candle.timestamp.timestamp() if hasattr(latest_candle.timestamp, 'timestamp') else latest_candle.timestamp
                 
                 if l_ts <= last_processed_time[sym]:
