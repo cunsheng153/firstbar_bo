@@ -1,5 +1,29 @@
-venv/
+# === 核心安全（绝对不能上传） ===
 .env
+*.env
+# 如果你本地有存储 key 的 json 或 yaml 也要加上
+config_local.yaml
+secrets.txt
+
+# === Python 环境 ===
+venv/
+.venv/
+env/
+bin/
+lib/
+# 排除 Python 编译缓存
 __pycache__/
 *.py[cod]
+*$py.class
+
+# === 操作系统与 IDE ===
 .DS_Store
+.vscode/
+.idea/
+*.swp
+*.log
+
+# === 项目特定（根据需要取消注释） ===
+# 如果你的策略会生成历史数据 CSV，建议忽略
+# *.csv
+# data/
