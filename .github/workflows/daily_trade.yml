@@ -28,4 +28,5 @@ jobs:
           LONGPORT_APP_KEY: ${{ secrets.LONGPORT_APP_KEY }}
           LONGPORT_APP_SECRET: ${{ secrets.LONGPORT_APP_SECRET }}
           LONGPORT_ACCESS_TOKEN: ${{ secrets.LONGPORT_ACCESS_TOKEN }}
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         run: python main/firstbar_bo_longport.py

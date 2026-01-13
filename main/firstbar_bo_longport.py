@@ -4,6 +4,7 @@ import pytz
 import requests
 import asyncio
 import signal
+import os
 import sys
 from dotenv import load_dotenv  # 导入库
 
@@ -11,7 +12,6 @@ load_dotenv()  # 加载环境变量
 
 # ==================== 配置区域 ====================
 symbols = ['SPY.US', 'QQQ.US', 'IWM.US', 'MSFT.US', 'GOOGL.US', 'META.US', 'AMZN.US', 'AAPL.US', 'TSLA.US', 'NVDA.US', 'PLTR.US']
-DISCORD_WEBHOOK = "https://discord.com/api/webhooks/1458571606807941376/WMuf2Tm5Lp5p_S-vlqFN7TB_7Y_hA0iWS45cg-eX85GfX2QX5o03vTiKqbDZbDBlCMcu"
 
 et_tz = pytz.timezone('US/Eastern')
 pst_tz = pytz.timezone('Etc/GMT+8')
@@ -30,6 +30,11 @@ def get_today_market_times():
     return market_open, monitor_start, monitor_end
 
 def send_webhook(title, description, color):
+    DISCORD_WEBHOOK = os.getenv("DISCORD_WEBHOOK")
+    
+    if not DISCORD_WEBHOOK:
+        print("[Warn] Discord推送失败: 环境变量 'DISCORD_WEBHOOK' 未设置")
+        return
     # 【核心修复】构造一段纯文本，专门给 TTS 读
     # 比如： "注意！AAPL 向上反弹失败"
     tts_text = f"注意！{title}" 
