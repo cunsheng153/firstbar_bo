@@ -14,6 +14,7 @@ symbols = ['SPY.US', 'QQQ.US', 'IWM.US', 'MSFT.US', 'GOOGL.US', 'META.US', 'AMZN
 DISCORD_WEBHOOK = "https://discord.com/api/webhooks/1458571606807941376/WMuf2Tm5Lp5p_S-vlqFN7TB_7Y_hA0iWS45cg-eX85GfX2QX5o03vTiKqbDZbDBlCMcu"
 
 et_tz = pytz.timezone('US/Eastern')
+pst_tz = pytz.timezone('Etc/GMT+8')
 
 shutdown_flag = False
 alerted = set()
@@ -32,6 +33,9 @@ def send_webhook(title, description, color):
     # 【核心修复】构造一段纯文本，专门给 TTS 读
     # 比如： "注意！AAPL 向上反弹失败"
     tts_text = f"注意！{title}" 
+    pst_tz = pytz.timezone('Asia/Shanghai')
+    now_pst = datetime.now(pst_tz).strftime('%Y-%m-%d %H:%M:%S')  # pyright: ignore[reportUnusedVariable]
+    full_description = f"{description}\n\n**北京时间(UTC+8):** `{now_pst}`"
     payload = {
         "username": "疤脸哥",
         "tts": True,               # 开启朗读
@@ -39,9 +43,9 @@ def send_webhook(title, description, color):
         "embeds": [
             {
                 "title": title,
-                "description": description,
+                "description": full_description,
                 "color": color,
-                "footer": {"text": "=====Longport 实时监控====="}
+                "footer": {"text": "=====Longport API实时监控====="}
             }
         ]
     }
@@ -86,7 +90,7 @@ async def get_first_candle_data(ctx):
 
 async def monitor_stocks(ctx):
     print("监控程序已启动...")
-    send_webhook("策略监控已启动", f"正在开启开盘反弹策略监控，当前时间：{datetime.now(et_tz).strftime('%Y-%m-%d %H:%M:%S')}", 3447003)
+    send_webhook("策略监控已启动", f"正在开启开盘反弹策略监控!", 3447003)
     last_processed_time = {sym: 0 for sym in symbols}
 
     while not shutdown_flag:
@@ -118,22 +122,27 @@ async def monitor_stocks(ctx):
                 continue
 
             try:
-                k_lines = ctx.candlesticks(sym, Period.Min_5, 2, AdjustType.NoAdjust)
-                if not k_lines or len(k_lines) < 2: continue
+                k_lines = ctx.candlesticks(sym, Period.Min_5, 3, AdjustType.NoAdjust)
+                if not k_lines or len(k_lines) < 3: continue
                 # k_lines[-1] 是当前未走完的（实时的）
                 # k_lines[-2] 是上一根已经走完的（收盘的）
-                latest_candle = k_lines[-2]
+                curr_candle = k_lines[-2]
+                # k_lines[-3] 是上一根已经走完的再上一根（收盘的）
+                prev_candle = k_lines[-3]
                 # 打印：股票 - 时间 - 当前价 - 最高 - 最低
-                print(f"[{sym}] 时间:{latest_candle.timestamp} 现价:{latest_candle.close} 高:{latest_candle.high} 低:{latest_candle.low}")
-                l_ts = latest_candle.timestamp.timestamp() if hasattr(latest_candle.timestamp, 'timestamp') else latest_candle.timestamp
+                print(f"[{sym}] 时间:{curr_candle.timestamp} 现价:{curr_candle.close} 高:{curr_candle.high} 低:{curr_candle.low}")
+                l_ts = curr_candle.timestamp.timestamp() if hasattr(curr_candle.timestamp, 'timestamp') else curr_candle.timestamp
                 
                 if l_ts <= last_processed_time[sym]:
                     continue 
                 
-                curr_open = float(latest_candle.open)
-                curr_close = float(latest_candle.close)
-                curr_high = float(latest_candle.high)
-                curr_low = float(latest_candle.low)
+                curr_open = float(curr_candle.open)
+                curr_close = float(curr_candle.close)
+                curr_high = float(curr_candle.high)
+                curr_low = float(curr_candle.low)
+                
+                prev_open=float(prev_candle.open)
+                prev_close=float(prev_candle.close)
                 
                 ref_high = first_range[sym]['high']
                 ref_low = first_range[sym]['low']
@@ -141,7 +150,8 @@ async def monitor_stocks(ctx):
                 last_processed_time[sym] = l_ts
 
                 # 逻辑判断
-                if curr_high > ref_low and curr_close <= ref_low and curr_open < ref_low:
+                # 当前5分钟已经收盘的 K 线最高价大于 firstbar 最低点，收盘和开盘都低于最低点，且前一根已收盘的 5 分钟 K 线开盘和收盘都低于 firstbar的最低点
+                if curr_high > ref_low and curr_close <= ref_low and curr_open < ref_low and prev_open < ref_low and prev_close < ref_low:
                     alert_id = f"{sym}_up_{l_ts}"
                     if alert_id not in alerted:
                         title = f"📉 {sym} 向上反弹失败"
@@ -152,8 +162,8 @@ async def monitor_stocks(ctx):
                         send_webhook(title, desc, 16711680) # 传入红色代码
                         alerted.add(alert_id)
                     print(f"[TRIGGER] {sym} UP FAIL")
-                
-                elif curr_low < ref_high and curr_close >= ref_high and curr_open > ref_high:
+                # 当前5分钟已经收盘的 K 线最低价小于 firstbar 最高点，收盘和开盘都高于最高点，且前一根已收盘的 5 分钟 K 线开盘和收盘都高于 firstbar的最高点
+                elif curr_low < ref_high and curr_close >= ref_high and curr_open > ref_high and prev_open > ref_low and prev_close > ref_low:
                     alert_id = f"{sym}_down_{l_ts}"
                     if alert_id not in alerted:
                         title = f"📈 {sym} 向下反弹失败"
