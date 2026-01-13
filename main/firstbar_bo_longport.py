@@ -35,7 +35,7 @@ def send_webhook(title, description, color):
     tts_text = f"注意！{title}" 
     pst_tz = pytz.timezone('Asia/Shanghai')
     now_pst = datetime.now(pst_tz).strftime('%Y-%m-%d %H:%M:%S')  # pyright: ignore[reportUnusedVariable]
-    full_description = f"{description}\n\n**北京时间(UTC+8):** `{now_pst}`"
+    full_description = f"{description}\n\n**北京时间:** `{now_pst}`"
     payload = {
         "username": "疤脸哥",
         "tts": True,               # 开启朗读
